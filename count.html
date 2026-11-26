@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>원하니 신청 현황</title>
+<style>
+html,body{margin:0;background:transparent}
+body{font-family:'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif;color:#2A2A28;word-break:keep-all}
+a.box{display:block;text-decoration:none;color:inherit;background:#EEF5F1;border-radius:14px;padding:14px 18px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.lbl{font-size:14px;color:#4E7F71;font-weight:600}
+.n{font-size:28px;font-weight:700;color:#2E4F46;line-height:1.1}
+.n small{font-size:15px;margin-left:2px}
+.bar{height:12px;background:#fff;border-radius:99px;overflow:hidden;margin:10px 0 6px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8FC3B2,#4E7F71);border-radius:99px;transition:width 1s ease}
+.sub{font-size:13.5px;color:#4E7F71}
+</style>
+</head>
+<body>
+<a class="box" href="https://wonforest100-cmyk.github.io/suyo/" target="_blank" rel="noopener">
+  <div class="top"><span class="lbl">지금까지 신청된 수량</span><span class="n"><span id="cnt">…</span><small id="unit"></small></span></div>
+  <div class="bar"><i id="fill"></i></div>
+  <div class="sub" id="sub">인쇄 목표 100권</div>
+</a>
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzXk9f1jcpJjNHby5grkHkj5o9XVRsrDocxhy_L9J35t3Rhjq3WrmoE5kZziAVnL9u/exec';
+const GOAL = 100;
+const $ = id => document.getElementById(id);
+function jsonp(url){
+  return new Promise((ok, no) => {
+    const cb = '_wh' + Date.now() + Math.floor(Math.random() * 1e4);
+    const sc = document.createElement('script');
+    const t = setTimeout(() => { cleanup(); no(new Error('timeout')); }, 6000);
+    function cleanup(){ clearTimeout(t); delete window[cb]; sc.remove(); }
+    window[cb] = d => { cleanup(); ok(d); };
+    sc.onload = () => setTimeout(() => { if (window[cb]) { cleanup(); no(new Error('no callback')); } }, 300);
+    sc.onerror = () => { cleanup(); no(new Error('error')); };
+    sc.src = url + '&callback=' + cb;
+    document.head.appendChild(sc);
+  });
+}
+async function viaJsonp(){ const j = await jsonp(SCRIPT_URL + '?action=count&t=' + Date.now()); if (j.total === undefined) throw 0; return +j.total || 0; }
+async function viaFetch(){ const r = await fetch(SCRIPT_URL + '?action=count&t=' + Date.now(), {credentials: 'omit'}); const j = await r.json(); if (j.total === undefined) throw 0; return +j.total || 0; }
+function show(n){
+  $('cnt').textContent = n.toLocaleString('ko-KR'); $('unit').textContent = '권';
+  $('fill').style.width = Math.min(100, n / GOAL * 100) + '%';
+  $('sub').textContent = n >= GOAL ? '인쇄 목표 100권 달성! 감사합니다' : `인쇄 목표 ${GOAL}권까지 ${GOAL - n}권 남았어요`;
+}
+async function load(){
+  for (const f of [viaJsonp, viaFetch, viaJsonp]) { try { show(await f()); return; } catch(e){} }
+  $('cnt').textContent = '집계 중'; setTimeout(load, 30000);
+}
+load();
+setInterval(load, 120000);
+</script>
+</body>
+</html>
